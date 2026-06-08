@@ -64,3 +64,6 @@
 2026-06-08 21:52:33 | DEBUG    | bot.client                | BinanceClient initialised. Base URL: https://testnet.binancefuture.com
 2026-06-08 21:52:33 | DEBUG    | bot.client                | Ping response: HTTP 200
 2026-06-08 21:52:33 | INFO     | werkzeug                  | 127.0.0.1 - - [08/Jun/2026 21:52:33] "GET /api/ping HTTP/1.1" 200 -
+2026-06-08 21:53:33 | DEBUG    | bot.client                | BinanceClient initialised. Base URL: https://testnet.binancefuture.com
+2026-06-08 21:53:33 | DEBUG    | bot.client                | Ping response: HTTP 200
+2026-06-08 21:53:33 | INFO     | werkzeug                  | 127.0.0.1 - - [08/Jun/2026 21:53:33] "GET /api/ping HTTP/1.1" 200 -
