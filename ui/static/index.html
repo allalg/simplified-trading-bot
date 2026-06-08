@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Bot — Binance Futures Testnet</title>
+  <meta name="description" content="Simplified Trading Bot dashboard for placing Market, Limit, and Stop-Limit orders on Binance Futures Testnet (USDT-M)." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Base ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0b0f1a;
+      --surface:     #111827;
+      --surface2:    #1a2235;
+      --border:      rgba(255,255,255,0.06);
+      --border-glow: rgba(99,179,237,0.3);
+      --text:        #e2e8f0;
+      --muted:       #64748b;
+      --accent:      #3b82f6;
+      --accent-glow: rgba(59,130,246,0.2);
+      --green:       #10b981;
+      --green-glow:  rgba(16,185,129,0.2);
+      --red:         #ef4444;
+      --red-glow:    rgba(239,68,68,0.2);
+      --yellow:      #f59e0b;
+      --radius:      12px;
+      --radius-sm:   8px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background grid ──────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top Nav ───────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+      background: rgba(11,15,26,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #f0b90b, #f5d05a);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      color: #000;
+    }
+
+    .nav-title {
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: -0.3px;
+    }
+
+    .nav-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.3s;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: all 0.3s;
+    }
+
+    .nav-status.connected .status-dot {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .nav-status.connected { color: var(--green); border-color: rgba(16,185,129,0.3); }
+    .nav-status.error .status-dot { background: var(--red); }
+    .nav-status.error { color: var(--red); border-color: rgba(239,68,68,0.3); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ── Main Layout ───────────────────────────────────────────────────────── */
+    .main {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,179,237,0.4), transparent);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Order Type Tabs ───────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      margin-bottom: 1.5rem;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .tab:hover { color: var(--text); }
+
+    .tab.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 12px var(--accent-glow);
+    }
+
+    .tab.market.active { background: var(--accent); }
+    .tab.limit.active  { background: #8b5cf6; box-shadow: 0 2px 12px rgba(139,92,246,0.3); }
+    .tab.stop.active   { background: var(--yellow); color: #000; box-shadow: 0 2px 12px rgba(245,158,11,0.3); }
+
+    /* ── Side Toggle ───────────────────────────────────────────────────────── */
+    .side-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+
+    .side-btn {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      letter-spacing: 1px;
+    }
+
+    .side-btn:hover { color: var(--text); }
+
+    .side-btn.buy.active {
+      background: rgba(16,185,129,0.12);
+      border-color: var(--green);
+      color: var(--green);
+      box-shadow: 0 0 16px rgba(16,185,129,0.1);
+    }
+
+    .side-btn.sell.active {
+      background: rgba(239,68,68,0.12);
+      border-color: var(--red);
+      color: var(--red);
+      box-shadow: 0 0 16px rgba(239,68,68,0.1);
+    }
+
+    /* ── Form ──────────────────────────────────────────────────────────────── */
+    .field { margin-bottom: 1rem; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    input.error {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--red-glow);
+    }
+
+    input::placeholder { color: var(--muted); opacity: 0.6; }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .field-error {
+      font-size: 11px;
+      color: var(--red);
+      margin-top: 4px;
+      display: none;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── Submit Button ─────────────────────────────────────────────────────── */
+    #submitBtn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--green), #059669);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    #submitBtn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+    }
+
+    #submitBtn:active { transform: translateY(0); }
+
+    #submitBtn.sell-mode {
+      background: linear-gradient(135deg, var(--red), #dc2626);
+      box-shadow: none;
+    }
+
+    #submitBtn.sell-mode:hover { box-shadow: 0 8px 24px rgba(239,68,68,0.35); }
+
+    #submitBtn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ─────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 999;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      max-width: 380px;
+      border: 1px solid transparent;
+    }
+
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    #toast.success {
+      background: rgba(16,185,129,0.12);
+      border-color: rgba(16,185,129,0.4);
+      color: var(--green);
+    }
+
+    #toast.error {
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.4);
+      color: var(--red);
+    }
+
+    /* ── Right Panel ───────────────────────────────────────────────────────── */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Stats Row ─────────────────────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .stat-card.total::before  { background: linear-gradient(90deg, var(--accent), #6366f1); }
+    .stat-card.success::before { background: linear-gradient(90deg, var(--green), #34d399); }
+    .stat-card.failed::before  { background: linear-gradient(90deg, var(--red), #f87171); }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+
+    /* ── Order History Table ───────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge.buy    { background: rgba(16,185,129,0.15); color: var(--green); }
+    .badge.sell   { background: rgba(239,68,68,0.15);  color: var(--red);   }
+    .badge.market { background: rgba(59,130,246,0.15); color: var(--accent); }
+    .badge.limit  { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .badge.stop   { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .badge.new    { background: rgba(99,179,237,0.15); color: #93c5fd; }
+    .badge.filled { background: rgba(16,185,129,0.15); color: var(--green); }
+    .badge.failed { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .empty-icon {
+      font-size: 36px;
+      display: block;
+      margin-bottom: 0.75rem;
+      opacity: 0.4;
+    }
+
+    /* ── Slide-in animation for new rows ───────────────────────────────────── */
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .row-new { animation: slideIn 0.35s ease; }
+
+    /* ── Symbol Autocomplete ───────────────────────────────────────────────── */
+    .symbol-wrap { position: relative; }
+
+    .symbol-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: #1e2d45;
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-sm);
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: none;
+    }
+
+    .symbol-dropdown.open { display: block; }
+
+    .symbol-option {
+      padding: 9px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      transition: background 0.15s;
+    }
+
+    .symbol-option:hover,
+    .symbol-option.active { background: rgba(59,130,246,0.15); }
+
+    .symbol-option mark {
+      background: none;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .symbol-base {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+
+    .symbol-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      padding: 3px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--muted);
+      display: none;
+    }
+
+    .symbol-chip.show { display: inline-flex; }
+    .symbol-chip-name { color: var(--text); font-weight: 500; }
+
+    /* Custom scrollbar for dropdown */
+    .symbol-dropdown::-webkit-scrollbar { width: 4px; }
+    .symbol-dropdown::-webkit-scrollbar-track { background: transparent; }
+    .symbol-dropdown::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+
+    /* ── Responsive ────────────────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">B</div>
+    <div>
+      <div class="nav-title">Trading Bot</div>
+      <div class="nav-subtitle">Binance Futures Testnet · USDT-M</div>
+    </div>
+  </div>
+  <div class="nav-status" id="statusBadge">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Connecting…</span>
+  </div>
+</nav>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- ── Order Form ─────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <p class="card-title">Place Order</p>
+
+    <!-- Order type tabs -->
+    <div class="tabs" role="tablist">
+      <button class="tab market active" id="tab-market" onclick="setOrderType('MARKET')">Market</button>
+      <button class="tab limit"  id="tab-limit"  onclick="setOrderType('LIMIT')">Limit</button>
+      <button class="tab stop"   id="tab-stop"   onclick="setOrderType('STOP_LIMIT')">Stop-Limit</button>
+    </div>
+
+    <!-- BUY / SELL toggle -->
+    <div class="side-toggle">
+      <button class="side-btn buy active" id="btn-buy"  onclick="setSide('BUY')">▲ BUY</button>
+      <button class="side-btn sell"       id="btn-sell" onclick="setSide('SELL')">▼ SELL</button>
+    </div>
+
+    <!-- Symbol -->
+    <div class="field">
+      <label for="inp-symbol">Symbol</label>
+      <div class="symbol-wrap">
+        <input type="text" id="inp-symbol" placeholder="Search symbol (e.g. BTCUSDT)" autocomplete="off"
+               oninput="filterSymbols(this.value)" onfocus="filterSymbols(this.value)"
+               onkeydown="symbolKeyNav(event)" />
+        <div class="symbol-dropdown" id="symbolDropdown"></div>
+      </div>
+      <div class="symbol-chip" id="symbolChip">
+        <span id="chipBase" class="symbol-chip-name"></span>
+        <span>/</span>
+        <span id="chipQuote">USDT</span>
+      </div>
+      <div class="field-error" id="err-symbol"></div>
+    </div>
+
+    <!-- Quantity -->
+    <div class="field">
+      <label for="inp-quantity">Quantity</label>
+      <input type="number" id="inp-quantity" placeholder="0.001" step="0.001" min="0" />
+      <div class="field-hint" id="hint-quantity">Min notional $50 USDT</div>
+      <div class="field-error" id="err-quantity"></div>
+    </div>
+
+    <!-- Limit price (shown for LIMIT and STOP_LIMIT) -->
+    <div class="field hidden" id="field-price">
+      <label for="inp-price">Limit Price (USDT)</label>
+      <input type="number" id="inp-price" placeholder="50000" step="1" min="0"
+             oninput="updateMinQtyForLimitPrice(this.value)" />
+      <div class="field-hint" id="hint-price"></div>
+      <div class="field-error" id="err-price"></div>
+    </div>
+
+    <!-- Stop price (shown for STOP_LIMIT only) -->
+    <div class="field hidden" id="field-stop-price">
+      <label for="inp-stop-price">Trigger Price (USDT)</label>
+      <input type="number" id="inp-stop-price" placeholder="49000" step="1" min="0" />
+      <div class="field-hint">Order triggers when market reaches this price</div>
+      <div class="field-error" id="err-stop-price"></div>
+    </div>
+
+    <button id="submitBtn" onclick="submitOrder()">
+      <span id="btnText">Place BUY Order</span>
+    </button>
+  </div>
+
+  <!-- ── Right Panel ─────────────────────────────────────────────────────────── -->
+  <div class="right-panel">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card total">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Orders Placed</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" style="color:var(--green)" id="stat-success">0</div>
+        <div class="stat-label">Successful</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-value" style="color:var(--red)" id="stat-failed">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+    </div>
+
+    <!-- Order History -->
+    <div class="card">
+      <p class="card-title">Order History</p>
+      <div class="table-wrap">
+        <table id="ordersTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Order ID</th>
+              <th>Symbol</th>
+              <th>Type</th>
+              <th>Side</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Stop</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody">
+            <tr id="emptyRow">
+              <td colspan="9">
+                <div class="empty-state">
+                  <span class="empty-icon">📋</span>
+                  No orders yet — place your first order!
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+  // ── State ────────────────────────────────────────────────────────────────────
+  let currentSide      = 'BUY';
+  let currentOrderType = 'MARKET';
+  let stats = { total: 0, success: 0, failed: 0 };
+  // Precision info for the currently selected symbol
+  let currentSymbolMeta = { quantityPrecision: 3, pricePrecision: 2 };
+
+  // ── Symbols autocomplete ─────────────────────────────────────────────────────
+  let allSymbols   = [];  // [{symbol, baseAsset, quoteAsset, ...}]
+  let filteredSyms = [];
+  let activeIdx    = -1;
+
+  async function loadSymbols() {
+    try {
+      const r = await fetch('/api/symbols');
+      const d = await r.json();
+      allSymbols = d.symbols || [];
+      // Pre-select BTCUSDT
+      const btc = allSymbols.find(s => s.symbol === 'BTCUSDT');
+      if (btc) selectSymbol(btc);
+    } catch { /* use whatever user types */ }
+  }
+
+  function filterSymbols(q) {
+    const dd = document.getElementById('symbolDropdown');
+    q = q.trim().toUpperCase();
+    if (!q) {
+      filteredSyms = allSymbols.slice(0, 30);
+    } else {
+      filteredSyms = allSymbols.filter(s =>
+        s.symbol.includes(q) || s.baseAsset.includes(q)
+      ).slice(0, 40);
+    }
+    activeIdx = -1;
+    renderDropdown(q);
+    dd.classList.toggle('open', filteredSyms.length > 0);
+  }
+
+  function renderDropdown(q) {
+    const dd = document.getElementById('symbolDropdown');
+    dd.innerHTML = filteredSyms.map((s, i) => {
+      // Highlight matching part
+      const sym = s.symbol.replace(
+        new RegExp(`(${q || ''})`, 'gi'),
+        q ? '<mark>$1</mark>' : '$1'
+      );
+      return `<div class="symbol-option" data-i="${i}" onmousedown="selectSymbol(filteredSyms[${i}])">
+        <span>${sym}</span>
+        <span class="symbol-base">${s.baseAsset} / USDT</span>
+      </div>`;
+    }).join('');
+  }
+
+  function selectSymbol(sym) {
+    document.getElementById('inp-symbol').value = sym.symbol;
+    document.getElementById('symbolDropdown').classList.remove('open');
+
+    // ── Update precision metadata ────────────────────────────────────────────
+    const qp = sym.quantityPrecision ?? 3;
+    const pp = sym.pricePrecision   ?? 2;
+    currentSymbolMeta = {
+      quantityPrecision: qp,
+      pricePrecision:    pp,
+      minQty:            parseFloat(sym.minQty  || 0),
+      stepSize:          parseFloat(sym.stepSize || 0),
+      minNotional:       parseFloat(sym.minNotional || 5),
+      multiplierUp:      sym.multiplierUp   ? parseFloat(sym.multiplierUp)   : null,
+      multiplierDown:    sym.multiplierDown ? parseFloat(sym.multiplierDown) : null,
+      tickSize:          sym.tickSize       ? parseFloat(sym.tickSize)        : null,
+    };
+
+    // Step from stepSize (preferred) or quantityPrecision fallback
+    let stepStr;
+    if (sym.stepSize && parseFloat(sym.stepSize) > 0) {
+      stepStr = sym.stepSize.replace(/\.?0+$/, '') || sym.stepSize;
+    } else {
+      stepStr = qp === 0 ? '1' : (1 / Math.pow(10, qp)).toFixed(qp);
+    }
+    const stepVal    = parseFloat(stepStr);
+    const minQtyVal  = sym.minQty  ? parseFloat(sym.minQty)  : stepVal;
+    const minNotional = sym.minNotional ? parseFloat(sym.minNotional) : 5;
+
+    document.getElementById('inp-quantity').step = stepStr;
+
+    // Show chip
+    const chip = document.getElementById('symbolChip');
+    document.getElementById('chipBase').textContent  = sym.baseAsset;
+    document.getElementById('chipQuote').textContent = sym.quoteAsset;
+    chip.classList.add('show');
+
+    // ── Fetch live mark price to compute true minimum qty ────────────────────
+    const qInp  = document.getElementById('inp-quantity');
+    const qHint = document.getElementById('hint-quantity');
+    qHint.innerHTML = `<span style="color:var(--muted)">Fetching price…</span>`;
+
+    fetch(`/api/price/${sym.symbol}`)
+      .then(r => r.json())
+      .then(d => {
+        const price = d.markPrice;
+        if (!price || price <= 0) throw new Error('no price');
+
+        // Store mark price for use by updateMinQtyForLimitPrice
+        currentSymbolMeta._markPrice = price;
+
+        // Set price input step to tickSize (Binance PRICE_FILTER)
+        const pInp = document.getElementById('inp-price');
+        const tickSize = currentSymbolMeta.tickSize;
+        if (tickSize && tickSize > 0) {
+          // Count decimals in tickSize string e.g. "0.10" → 1, "0.0001" → 4
+          const tickStr = sym.tickSize.replace(/0+$/, '') || sym.tickSize;
+          pInp.step = tickStr;
+          currentSymbolMeta._tickStr = tickStr;
+        } else {
+          const ppStep = pp === 0 ? '1' : (1 / Math.pow(10, pp)).toFixed(pp);
+          pInp.step = ppStep;
+          currentSymbolMeta._tickStr = ppStep;
+        }
+        pInp.placeholder = price.toFixed(pp);
+
+        // Show allowed price range immediately on the price hint
+        const hintP = document.getElementById('hint-price');
+        if (currentSymbolMeta.multiplierUp && currentSymbolMeta.multiplierDown) {
+          const lo = (price * currentSymbolMeta.multiplierDown).toFixed(pp);
+          const hi = (price * currentSymbolMeta.multiplierUp).toFixed(pp);
+          hintP.innerHTML =
+            `Allowed price range: <strong style="color:var(--text)">${lo} – ${hi}</strong>` +
+            ` <span style="color:var(--muted)">(based on mark price)</span>`;
+        }
+
+        // True minimum: must satisfy BOTH minQty AND minNotional/price
+        const minFromNotional = minNotional / price;
+        const rawMin = Math.max(minQtyVal, minFromNotional);
+
+        // Round UP to the nearest step
+        const trueMin = Math.ceil(rawMin / stepVal) * stepVal;
+        const trueMinStr = trueMin.toFixed(qp);
+
+        // Update input placeholder and min
+        qInp.placeholder = trueMinStr;
+        qInp.min         = trueMinStr;
+
+        // Build clear hint
+        const priceStr = price > 100
+          ? '$' + price.toLocaleString('en-US', {maximumFractionDigits: 2})
+          : '$' + price.toPrecision(4);
+
+        qHint.innerHTML =
+          `Mark price: <strong style="color:var(--text)">${priceStr}</strong>` +
+          ` &nbsp;·&nbsp; Min notional: <strong style="color:var(--text)">$${minNotional}</strong>` +
+          ` &nbsp;·&nbsp; ` +
+          `<span style="color:var(--green);font-weight:600">Min qty to order: ${trueMinStr}</span>` +
+          ` &nbsp;·&nbsp; Step: ${stepStr}`;
+      })
+      .catch(() => {
+        // Fallback: show static hint without price
+        qHint.innerHTML =
+          `Min notional: $${minNotional} USDT &nbsp;·&nbsp; ` +
+          `Min qty: ${minQtyVal} &nbsp;·&nbsp; Step: ${stepStr}` +
+          ` &nbsp;<span style="color:var(--muted)">(price unavailable)</span>`;
+      });
+  }
+
+  function symbolKeyNav(e) {
+    const dd = document.getElementById('symbolDropdown');
+    const items = dd.querySelectorAll('.symbol-option');
+    if (!dd.classList.contains('open')) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+    } else if (e.key === 'Enter' && activeIdx >= 0) {
+      e.preventDefault();
+      selectSymbol(filteredSyms[activeIdx]);
+      return;
+    } else if (e.key === 'Escape') {
+      dd.classList.remove('open');
+      return;
+    }
+    items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+    if (activeIdx >= 0) items[activeIdx].scrollIntoView({ block: 'nearest' });
+  }
+
+  // Close dropdown when clicking elsewhere
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.symbol-wrap')) {
+      document.getElementById('symbolDropdown').classList.remove('open');
+    }
+  });
+
+  // ── On load ──────────────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    loadSymbols();
+    checkConnection();
+    setInterval(checkConnection, 15000);
+  });
+
+  // ── Live limit-price → min qty updater ──────────────────────────────────────
+  function updateMinQtyForLimitPrice(priceVal) {
+    const price = parseFloat(priceVal);
+    if (!price || price <= 0) return;
+
+    const meta  = currentSymbolMeta;
+    const qp    = meta.quantityPrecision;
+    const step  = meta.stepSize > 0 ? meta.stepSize : (qp === 0 ? 1 : 1 / Math.pow(10, qp));
+    const minQ  = meta.minQty  > 0 ? meta.minQty  : step;
+    const minN  = meta.minNotional > 0 ? meta.minNotional : 5;
+
+    // Min qty that satisfies notional at the user's chosen limit price
+    const minFromNotional = minN / price;
+    const rawMin  = Math.max(minQ, minFromNotional);
+    const trueMin = (Math.ceil(rawMin / step) * step).toFixed(qp);
+
+    const qHint = document.getElementById('hint-quantity');
+    const pp    = meta.pricePrecision;
+    const markP = meta._markPrice || 0;
+
+    // Show allowed price range from PERCENT_PRICE filter
+    const hintP = document.getElementById('hint-price');
+    if (markP > 0 && meta.multiplierUp && meta.multiplierDown) {
+      const lo = (markP * parseFloat(meta.multiplierDown)).toFixed(pp);
+      const hi = (markP * parseFloat(meta.multiplierUp)).toFixed(pp);
+      const inRange = price >= parseFloat(lo) && price <= parseFloat(hi);
+      hintP.innerHTML =
+        `Allowed price range: <strong style="color:${inRange ? 'var(--green)' : 'var(--red)'}">${lo} – ${hi}</strong>` +
+        (inRange ? '' : ' <span style="color:var(--red)">⚠️ out of range</span>');
+    }
+
+    // Update qty hint to reflect this limit price
+    qHint.innerHTML =
+      `At limit price <strong style="color:var(--text)">${price}</strong>` +
+      ` &nbsp;·&nbsp; Min notional: <strong style="color:var(--text)">$${minN}</strong>` +
+      ` &nbsp;·&nbsp; ` +
+      `<span style="color:var(--green);font-weight:600">Min qty to order: ${trueMin}</span>` +
+      ` &nbsp;·&nbsp; Step: ${step.toFixed(qp).replace(/\.?0+$/, '') || step}`;
+  }
+
+  async function checkConnection() {
+    const badge = document.getElementById('statusBadge');
+    const text  = document.getElementById('statusText');
+    try {
+      const r = await fetch('/api/ping');
+      const d = await r.json();
+      if (d.connected) {
+        badge.className = 'nav-status connected';
+        text.textContent = 'Testnet Connected';
+      } else {
+        badge.className = 'nav-status error';
+        text.textContent = 'Disconnected';
+      }
+    } catch {
+      badge.className = 'nav-status error';
+      text.textContent = 'Server Offline';
+    }
+  }
+
+  // ── Order type ───────────────────────────────────────────────────────────────
+  function setOrderType(type) {
+    currentOrderType = type;
+    ['MARKET','LIMIT','STOP_LIMIT'].forEach(t => {
+      const el = document.getElementById('tab-' + t.toLowerCase().replace('_limit', ''));
+      if (el) el.classList.toggle('active', t === type);
+    });
+    // Show/hide price fields
+    document.getElementById('field-price').classList.toggle('hidden', type === 'MARKET');
+    document.getElementById('field-stop-price').classList.toggle('hidden', type !== 'STOP_LIMIT');
+    clearErrors();
+  }
+
+  // ── Side ─────────────────────────────────────────────────────────────────────
+  function setSide(side) {
+    currentSide = side;
+    document.getElementById('btn-buy').classList.toggle('active', side === 'BUY');
+    document.getElementById('btn-sell').classList.toggle('active', side === 'SELL');
+    const btn = document.getElementById('submitBtn');
+    btn.classList.toggle('sell-mode', side === 'SELL');
+    document.getElementById('btnText').textContent =
+      `Place ${side} Order`;
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────────
+  async function submitOrder() {
+    clearErrors();
+    const btn    = document.getElementById('submitBtn');
+    const btnTxt = document.getElementById('btnText');
+
+    const symbol    = document.getElementById('inp-symbol').value.trim().toUpperCase();
+    const quantity  = document.getElementById('inp-quantity').value.trim();
+    const price     = document.getElementById('inp-price').value.trim();
+    const stopPrice = document.getElementById('inp-stop-price').value.trim();
+
+    // Basic client-side required checks
+    if (!symbol)   return showFieldError('symbol',   'Symbol is required');
+    if (!quantity) return showFieldError('quantity', 'Quantity is required');
+    if (currentOrderType !== 'MARKET' && !price) return showFieldError('price', 'Limit price is required');
+    if (currentOrderType === 'STOP_LIMIT' && !stopPrice) return showFieldError('stop-price', 'Trigger price is required');
+
+    // ── Auto-round to symbol's precision rules ───────────────────────────────
+    const qp       = currentSymbolMeta.quantityPrecision;
+    const tickSize = currentSymbolMeta.tickSize;
+    const tickStr  = currentSymbolMeta._tickStr;
+
+    // Count decimal places in tickSize string for price rounding
+    function tickDecimals(ts) {
+      if (!ts) return 2;
+      const s = String(ts).replace(/0+$/, '').replace(/^0+/, '') || '0';
+      const dot = s.indexOf('.');
+      return dot === -1 ? 0 : s.length - dot - 1;
+    }
+    const priceDp = tickSize ? tickDecimals(tickSize) : (currentSymbolMeta.pricePrecision || 2);
+
+    // Round qty to quantityPrecision step
+    const roundedQty = parseFloat(parseFloat(quantity).toFixed(qp));
+
+    // Round price to tickSize (nearest tick)
+    function roundToTick(val, tick) {
+      if (!tick || tick <= 0) return val;
+      return Math.round(val / tick) * tick;
+    }
+    const rawPrice    = price     ? parseFloat(price)     : null;
+    const rawStop     = stopPrice ? parseFloat(stopPrice) : null;
+    const roundedPrice = rawPrice ? parseFloat(roundToTick(rawPrice, tickSize).toFixed(priceDp))    : null;
+    const roundedStop  = rawStop  ? parseFloat(roundToTick(rawStop,  tickSize).toFixed(priceDp))    : null;
+
+    // Warn the user if qty was rounded
+    if (roundedQty !== parseFloat(quantity)) {
+      showToast(`⚠️  Qty rounded to ${qp} decimal${qp !== 1 ? 's' : ''}: ${roundedQty}`, 'error');
+      document.getElementById('inp-quantity').value = roundedQty;
+    }
+    // Warn if price was rounded to tick
+    if (rawPrice && roundedPrice !== rawPrice) {
+      showToast(`⚠️  Price rounded to tick ${tickStr}: ${roundedPrice}`, 'error');
+      document.getElementById('inp-price').value = roundedPrice;
+    }
+
+    // Loading state
+    btn.disabled = true;
+    btnTxt.innerHTML = '<span class="btn-spinner"></span>Placing Order…';
+
+    const body = {
+      symbol,
+      side:       currentSide,
+      order_type: currentOrderType,
+      quantity:   String(roundedQty),
+      price:      roundedPrice !== null ? String(roundedPrice) : null,
+      stop_price: roundedStop  !== null ? String(roundedStop)  : null,
+    };
+
+    try {
+      const resp = await fetch('/api/order', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        stats.total++;
+        stats.success++;
+        updateStats();
+        addOrderRow(data.order, true);
+        showToast('✅  Order placed — ID: ' + data.order.orderId, 'success');
+      } else {
+        stats.total++;
+        stats.failed++;
+        updateStats();
+        addFailedRow(body);
+
+        // Show field-specific error if we got a field back
+        if (data.field) {
+          const field = data.field.replace('_', '-');
+          showFieldError(field, data.error.replace(/^\[.*?\]\s*/, ''));
+        }
+        showToast('❌  ' + data.error, 'error');
+      }
+    } catch (err) {
+      stats.total++;
+      stats.failed++;
+      updateStats();
+      showToast('❌  Network error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btnTxt.textContent = `Place ${currentSide} Order`;
+    }
+  }
+
+  // ── Table helpers ─────────────────────────────────────────────────────────────
+  function addOrderRow(order, success) {
+    removeEmptyRow();
+    const tbody = document.getElementById('ordersBody');
+    const tr = document.createElement('tr');
+    tr.className = 'row-new';
+
+    const type  = (order.type  || '').toLowerCase();
+    const side  = (order.side  || '').toLowerCase();
+    const status = (order.status || '').toLowerCase();
+
+    tr.innerHTML = `
+      <td>${new Date().toLocaleTimeString()}</td>
+      <td style="color:var(--muted);font-size:11px">${order.orderId}</td>
+      <td><strong>${order.symbol}</strong></td>
+      <td><span class="badge ${type}">${order.type}</span></td>
+      <td><span class="badge ${side}">${order.side}</span></td>
+      <td>${order.origQty}</td>
+      <td>${order.price && order.price !== '0' && order.price !== '0.00' ? '$'+Number(order.price).toLocaleString() : '—'}</td>
+      <td>${order.stopPrice && order.stopPrice !== '0' && order.stopPrice !== '0.00' ? '$'+Number(order.stopPrice).toLocaleString() : '—'}</td>
+      <td><span class="badge ${status}">${order.status}</span></td>
+    `;
+    tbody.insertBefore(tr, tbody.firstChild);
+  }
+
+  function addFailedRow(body) {
+    removeEmptyRow();
+    const tbody = document.getElementById('ordersBody');
+    const tr = document.createElement('tr');
+    tr.className = 'row-new';
+    const type = (body.order_type || '').toLowerCase().replace('_limit','').replace('_','');
+    const side = (body.side || '').toLowerCase();
+    tr.innerHTML = `
+      <td>${new Date().toLocaleTimeString()}</td>
+      <td style="color:var(--muted);font-size:11px">—</td>
+      <td><strong>${body.symbol}</strong></td>
+      <td><span class="badge ${type}">${body.order_type}</span></td>
+      <td><span class="badge ${side}">${body.side}</span></td>
+      <td>${body.quantity || '—'}</td>
+      <td>${body.price ? '$'+Number(body.price).toLocaleString() : '—'}</td>
+      <td>${body.stop_price ? '$'+Number(body.stop_price).toLocaleString() : '—'}</td>
+      <td><span class="badge failed">FAILED</span></td>
+    `;
+    tbody.insertBefore(tr, tbody.firstChild);
+  }
+
+  function removeEmptyRow() {
+    const empty = document.getElementById('emptyRow');
+    if (empty) empty.remove();
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────────
+  function updateStats() {
+    document.getElementById('stat-total').textContent   = stats.total;
+    document.getElementById('stat-success').textContent = stats.success;
+    document.getElementById('stat-failed').textContent  = stats.failed;
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = ''; }, 4000);
+  }
+
+  // ── Field errors ──────────────────────────────────────────────────────────────
+  function showFieldError(field, msg) {
+    const errEl = document.getElementById('err-' + field);
+    const inpEl = document.getElementById('inp-' + field);
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    if (inpEl) inpEl.classList.add('error');
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.field-error').forEach(el => {
+      el.textContent = ''; el.style.display = 'none';
+    });
+    document.querySelectorAll('input').forEach(el => el.classList.remove('error'));
+  }
+</script>
+</body>
+</html>
